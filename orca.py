@@ -26,6 +26,8 @@ import time
 from time import gmtime, strftime
 from subprocess import call
 
+from updateServer import updateServer
+
 # Choose the text2html translator here and name the function render
 
 import markdown2
@@ -275,17 +277,16 @@ def updateGithub(compile_list):
         call(['git', 'commit', '-m', commit_message])
         call(['git', 'push'])
 
-
 if __name__ == '__main__':
 
     config = SafeConfigParser()
     config.read(CONFIG_DIR)
     FRONTPAGE_COLUMN_ORDER = config.get('Frontpage', 'Column_Order')
 
-    chdir('../')
     compile_list = getCompileList()
     compile(compile_list)
     build_frontpage()
     build_archive()
 
     updateGithub(compile_list)
+    updateServer(compile_list)
