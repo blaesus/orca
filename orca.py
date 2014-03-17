@@ -18,7 +18,7 @@ FORCE_GENERATE = False
 GITHUB_UPDATE = True
 DEBUG = False
 
-from os import listdir, chdir
+from os import listdir, chdir, getcwd
 from os.path import getmtime, splitext
 from ConfigParser import SafeConfigParser
 import csv
@@ -111,12 +111,8 @@ def getCompileList():
     # modification time.
     for file in compile_list.keys():
         if file in previous_article_list.keys():
-            if compile_list[file] >= previous_article_list[file]:
-
-                if FORCE_GENERATE:
-                    pass
-                else:
-                    del compile_list[file]
+            if compile_list[file] <= previous_article_list[file]:
+                del compile_list[file]
 
     return compile_list
 
@@ -139,7 +135,6 @@ def compile(compile_list):
     Call markdown2 to convert every .md file in the compile list to
     HTML files.
     """
-
 
     def beautify(mainHtml, template=''):
 
@@ -278,6 +273,9 @@ def updateGithub(compile_list):
         call(['git', 'push'])
 
 if __name__ == '__main__':
+
+    if getcwd()[-4:] == 'orca':
+        chdir('..')
 
     config = SafeConfigParser()
     config.read(CONFIG_DIR)
