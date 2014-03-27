@@ -14,9 +14,8 @@ SOURCE_INDENTATION = 8
 
 ORCA_CODE_PREFIX = '<!--ORCA:'
 
-FORCE_GENERATE = False
-GITHUB_UPDATE = True
-DEBUG = False
+FORCE_GENERATE = True
+DEBUG = True
 
 from os import listdir, chdir, getcwd
 from os.path import getmtime, splitext
@@ -55,6 +54,7 @@ def extractTag(html, tag):
         pos2 = html.index('</'+tag+'>', pos1)
 
         return htmlOriginal[pos1:pos2]
+
     except ValueError:
         return ''
 
@@ -109,10 +109,11 @@ def getCompileList():
 
     # Delete from compile_list which are older or of the same
     # modification time.
-    for file in compile_list.keys():
-        if file in previous_article_list.keys():
-            if compile_list[file] <= previous_article_list[file]:
-                del compile_list[file]
+    if not FORCE_GENERATE:
+        for file in compile_list.keys():
+            if file in previous_article_list.keys():
+                if compile_list[file] <= previous_article_list[file]:
+                    del compile_list[file]
 
     return compile_list
 
@@ -212,7 +213,7 @@ def compile(compile_list):
                 f.write(beautify(render(sourceContent)).encode('utf-8'))
 
     if not compile_list:
-        print "Nothing to update."
+        print "Nothing to update.\n"
 
 def build_frontpage():
 
@@ -221,7 +222,7 @@ def build_frontpage():
           following the ORCA instructings lay down in the files.
     """
 
-    print 'Building index.html'
+    print '\nBuilding index.html'
 
     # Get meta info about existing HTMLs
     articles = []
@@ -229,25 +230,37 @@ def build_frontpage():
         if splitext(file)[1] == '.html':
             with open(file, 'r') as f:
                 html = f.read().decode('utf-8')
-                articles.append((file,
-                                 extractTitle(html),
+
+                if extractSingleORCACode(html, 'FP_TITLE'):
+                    title = extractSingleORCACode(html, 'FP_TITLE')
+                else:
+                    title = extractTitle(html)
+
+                articles.append({'filename':
+                                 file,
+                                 'title':
+                                 title,
+                                 'COLUMN':
                                  extractSingleORCACode(html, 'COLUMN'),
+                                 'PRIORITY':
                                  extractSingleORCACode(html, 'PRIORITY'),
-                                 getmtime(file)))
+                                 'mtime':
+                                 getmtime(file)})
 
 
+    # Build html file
     content = ''
     for column in FRONTPAGE_COLUMN_ORDER.split(';'):
         content += indent('<div>' + '\n') +\
                    indent( '<h3>' + column + '</h3>' + '\n', 4) +\
                    indent('<ul>', 4)
         for art in articles:
-            if (art[2] == column) and (art[3] > -1):
+            if (art['COLUMN'] == column) and (art['PRIORITY'] > -1):
                 content += indent('<li>', 8, newline=0)
                 content += '<a href="'
-                content += art[0]
+                content += art['filename']
                 content += '">'
-                content += art[1]
+                content += art['title']
                 content += '</a></li>\n'
 
         content += indent('</ul>', 4)
@@ -263,10 +276,8 @@ def build_archive():
     pass
 
 def updateGithub(compile_list):
-    if not GITHUB_UPDATE:
-        return
     if compile_list:
-        print 'Updating git respository'
+        print '\nUpdating git respository\n'
         call(['git', 'add', '.'])
         commit_message = ';'.join(compile_list.keys())
         call(['git', 'commit', '-m', commit_message])
@@ -286,5 +297,8 @@ if __name__ == '__main__':
     build_frontpage()
     build_archive()
 
-    updateGithub(compile_list)
-    updateServer(compile_list)
+    if not DEBUG:
+        updateGithub(compile_list)
+        updateServer(compile_list)
+
+    print "Done."
