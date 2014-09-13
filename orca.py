@@ -23,7 +23,6 @@ from configparser import ConfigParser
 import csv
 from subprocess import call
 
-from updateServer import updateServer
 
 # Choose the text2html translator here and name the function render
 
@@ -305,6 +304,7 @@ if __name__ == '__main__':
 
     if not DEBUG:
         updateGithub(compile_list)
-        updateServer(compile_list)
+        from updateServer import sshUpdate
+        sshUpdate(compile_list)
 
     print("Done.")
