@@ -22,6 +22,7 @@ from os.path import getmtime, splitext
 from configparser import ConfigParser
 import csv
 from subprocess import call
+import updateServer
 
 
 # Choose the text2html translator here and name the function render
@@ -304,7 +305,6 @@ if __name__ == '__main__':
 
     if not DEBUG:
         updateGithub(compile_list)
-        from updateServer import sshUpdate
-        sshUpdate(compile_list)
+        updateServer.sshUpdate(compile_list)
 
     print("Done.")
