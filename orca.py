@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/local/python
 # -*- coding=utf-8 -*-
 
 SOURCE_DIR = "./md"
@@ -14,15 +14,13 @@ SOURCE_INDENTATION = 8
 
 ORCA_CODE_PREFIX = '<!--ORCA:'
 
-FORCE_GENERATE = True
-DEBUG = True
+FORCE_GENERATE = False
+DEBUG = False
 
 from os import listdir, chdir, getcwd
 from os.path import getmtime, splitext
-from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
 import csv
-import time
-from time import gmtime, strftime
 from subprocess import call
 
 from updateServer import updateServer
@@ -95,13 +93,16 @@ def getCompileList():
     # Retrieve meta info records
     previous_article_list = dict()
 
-    with open(META_DB_DIR, 'rb') as csvfile:
-        reader = csv.reader(csvfile, delimiter=CSV_DELIMITER, quotechar='|')
-        for row in reader:
-            previous_article_list[row[0]] = float(row[1])
+    try:
+        with open(META_DB_DIR, 'r') as csvfile:
+            reader = csv.reader(csvfile, delimiter=CSV_DELIMITER, quotechar='|')
+            for row in reader:
+                previous_article_list[row[0]] = float(row[1])
+    except IOError:
+        pass
 
     # Update meta database
-    with open(META_DB_DIR, 'wb') as csvfile:
+    with open(META_DB_DIR, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=CSV_DELIMITER,
                  quotechar='|', quoting=csv.QUOTE_MINIMAL)
         for file in compile_list:
@@ -110,8 +111,8 @@ def getCompileList():
     # Delete from compile_list which are older or of the same
     # modification time.
     if not FORCE_GENERATE:
-        for file in compile_list.keys():
-            if file in previous_article_list.keys():
+        for file in list(compile_list.keys()):
+            if file in list(previous_article_list.keys()):
                 if compile_list[file] <= previous_article_list[file]:
                     del compile_list[file]
 
@@ -142,8 +143,7 @@ def compile(compile_list):
         def getORCAlabel(line):
 
             try:
-                posStart = line.index('ORCA:LABEL=') + \
-                           len('ORCA:LABEL=')
+                posStart = line.index('ORCA:LABEL=') + len('ORCA:LABEL=')
                 posEnd = line.index('-->')
                 tagSpecial = None
                 tagSpecialQuality = None
@@ -168,7 +168,7 @@ def compile(compile_list):
 
             return (tag, tagSpecial, tagSpecialQuality)
 
-        # load template
+        # Load template
         if not template:
             with open(MAIN_TEMPLATE, 'r') as f:
                 template = f.read()
@@ -181,7 +181,8 @@ def compile(compile_list):
                                 indent(mainHtml),
                                 1)
 
-        # Deal with ORCA instructions
+        # Execute ORCA instructions
+
         for line in result.splitlines():
             if '<!--ORCA:' in line:
                 lineOriginal = line[:]
@@ -195,8 +196,8 @@ def compile(compile_list):
                     tag, tagSpecial, tagQuality = getORCAlabel(lineOriginal)
                     reformattedline = \
                             '<' + tag + ' ' + tagSpecial + '="' + \
-                                tagQuality + '"' '>' +\
-                            line +\
+                                tagQuality + '"' '>' + \
+                            line + \
                             '</' + tag + '>'
                     reformattedline = indent(reformattedline)
                     result = result.replace(lineOriginal, reformattedline, 1)
@@ -204,16 +205,16 @@ def compile(compile_list):
         return result
 
     # Compile source files to the destination format
-    for file in compile_list.keys():
+    for file in list(compile_list.keys()):
         with open(toSourceDir(file)) as f:
-            sourceContent = f.read().decode('utf-8')
+            sourceContent = f.read()
             htmlFile = splitext(file)[0] + '.html'
             with open(htmlFile, 'w') as f:
-                print "Converting %s" % file
-                f.write(beautify(render(sourceContent)).encode('utf-8'))
+                print(("Converting %s" % file))
+                f.write(beautify(render(sourceContent)))
 
     if not compile_list:
-        print "Nothing to update.\n"
+        print("Nothing to update.\n")
 
 def build_frontpage():
 
@@ -222,14 +223,14 @@ def build_frontpage():
           following the ORCA instructings lay down in the files.
     """
 
-    print '\nBuilding index.html'
+    print('\nBuilding index.html')
 
     # Get meta info about existing HTMLs
     articles = []
     for file in listdir('.'):
         if splitext(file)[1] == '.html':
             with open(file, 'r') as f:
-                html = f.read().decode('utf-8')
+                html = f.read()
 
                 if extractSingleORCACode(html, 'FP_TITLE'):
                     title = extractSingleORCACode(html, 'FP_TITLE')
@@ -254,8 +255,13 @@ def build_frontpage():
         content += indent('<div>' + '\n') +\
                    indent( '<h3>' + column + '</h3>' + '\n', 4) +\
                    indent('<ul>', 4)
+
         for art in articles:
-            if (art['COLUMN'] == column) and (art['PRIORITY'] > -1):
+
+            if art['PRIORITY'] == '-1':
+                continue
+
+            if (art['COLUMN'] == column):
                 content += indent('<li>', 8, newline=0)
                 content += '<a href="'
                 content += art['filename']
@@ -267,19 +273,19 @@ def build_frontpage():
         content += indent('</div>', 0, newline=2)
 
     with open(FRONT_TEMPLATE, 'r') as f:
-        frontHTML = f.read().decode('utf-8')
+        frontHTML = f.read()
         frontHTML = frontHTML.replace('<!--CONTENT-->', content)
         with open('index.html', 'w') as f_index:
-            f_index.write(frontHTML.encode('utf-8'))
+            f_index.write(frontHTML)
 
 def build_archive():
     pass
 
 def updateGithub(compile_list):
     if compile_list:
-        print '\nUpdating git respository\n'
-        call(['git', 'add', '.'])
-        commit_message = ';'.join(compile_list.keys())
+        print('\nUpdating git respository\n')
+        call(['git', 'add', '--all', '.'])
+        commit_message = ';'.join(list(compile_list.keys()))
         call(['git', 'commit', '-m', commit_message])
         call(['git', 'push'])
 
@@ -288,7 +294,7 @@ if __name__ == '__main__':
     if getcwd()[-4:] == 'orca':
         chdir('..')
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     config.read(CONFIG_DIR)
     FRONTPAGE_COLUMN_ORDER = config.get('Frontpage', 'Column_Order')
 
@@ -301,4 +307,4 @@ if __name__ == '__main__':
         updateGithub(compile_list)
         updateServer(compile_list)
 
-    print "Done."
+    print("Done.")

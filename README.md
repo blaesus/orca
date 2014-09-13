@@ -1,6 +1,6 @@
 Introduction
 ============
-Orca generates HTMLs from markdown files, with very few additional functions.
+Orca generates HTMLs from markdown files. It does little beyond that.
 I wrote it for my personal website [shux.in](http://shux.in).
 
 Unsupported Features
@@ -14,7 +14,7 @@ Orca does _not_ support the following features:
 
 Currently Supported Features
 ============================
-Orca does support the following features:
+Orca _does_ support the following features:
 * Generating HTMLs,
 * Building a index.html from the list of articles,
 * Several additional formatting options, and
@@ -28,4 +28,4 @@ I may add the following features to the site generator:
 
 Why the name?
 =============
-I like black and white. Among the few cases of black and white animals, I find orcas (killer whales) to be the most graceful. I want my personal website to like orcas.
+I like black and white. Among the few cases of black and white animals, I find orcas (cutely nicknamed killer whales) to be the most graceful. According to Wikipedia. I want my personal website to feel like orcas.
