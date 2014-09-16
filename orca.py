@@ -1,4 +1,4 @@
-#!/usr/bin/local/python
+#!/usr/bin/python
 # -*- coding=utf-8 -*-
 
 SOURCE_DIR = "./md"
@@ -22,7 +22,6 @@ from os.path import getmtime, splitext
 from configparser import ConfigParser
 import csv
 from subprocess import call
-import updateServer
 
 
 # Choose the text2html translator here and name the function render
@@ -304,6 +303,7 @@ if __name__ == '__main__':
     build_archive()
 
     if not DEBUG:
+        import updateServer
         updateGithub(compile_list)
         updateServer.sshUpdate(compile_list)
 
