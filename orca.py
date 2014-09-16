@@ -302,9 +302,14 @@ if __name__ == '__main__':
     build_frontpage()
     build_archive()
 
-    if not DEBUG:
-        import updateServer
+    if not DEBUG and compile_list:
         updateGithub(compile_list)
-        updateServer.sshUpdate(compile_list)
+        try:
+            import updateServer
+            updateServer.sshUpdate()
+        except ImportError:
+            print("Server sync module found.")
+    else:
+        print("No server sync.")
 
-    print("Done.")
+    print("*** Orca sleeps now ***")
