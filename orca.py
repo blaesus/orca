@@ -1,6 +1,10 @@
 #!/usr/bin/python
 # -*- coding=utf-8 -*-
 
+__author__ = "Andy Shu Xin"
+__copyright__ = "Copyright (C) 2014 Andy Shu Xin"
+__license__ = "GNU General Public License v3.0"
+
 SOURCE_DIR = "./md"
 SOURCE_EXT = ".md"
 META_DB_DIR = "articles.csv"
@@ -24,24 +28,23 @@ import csv
 from subprocess import call
 
 
-# Choose the text2html translator here and name the function render
-
 import markdown2
-render = lambda s: markdown2.markdown(s, extras=['wiki-tables'])
+md2html = lambda s: markdown2.markdown(s, extras=['wiki-tables'])
 
-#import misaka
-#render = misaka.html
 
 def getHumanReadableTime(timeInSec):
     return timeInSec
 
+
 def getAbsoluteTime(hTime):
     return hTime
 
-def toSourceDir(dir):
-    return SOURCE_DIR + '/' + dir
 
-def extractTag(html, tag):
+def get_path_under_source_dir(path):
+    return SOURCE_DIR + '/' + path
+
+
+def get_tag_content(html, tag):
     htmlOriginal = html
     html = html.upper()
     tag = tag.upper()
@@ -55,14 +58,15 @@ def extractTag(html, tag):
     except ValueError:
         return ''
 
-def extractTitle(html):
-    res = extractTag(html, 'H1')
-    res = res.replace('<br>', '')
-    res = res.replace('<br/>', '')
-    res = res.replace('<br />', '')
+
+def get_html_title(html):
+    res = get_tag_content(html, 'H1')
+    for newline_tag in ('<br>', '<br/>', '<br />'):
+        res = res.replace(newline_tag, '')
     return res
 
-def extractSingleORCACode(html, code):
+
+def get_single_ORCA_code(html, code):
     signitureString = ORCA_CODE_PREFIX + code
     try:
         posStart = html.index(signitureString) + len(signitureString)
@@ -73,65 +77,63 @@ def extractSingleORCACode(html, code):
         return ''
 
 
-def getCompileList():
+def get_source_list():
     """
     Returns a dictionary, the keys are (names of) source files newer
     or older than their respective HTML files, the second is its
     modification time.
     """
 
-    compile_list = dict()
+    source_list = dict()
 
-    # Pair all .md files with its latest modification time
+    # Pair all source files with its latest modification time
     for file in listdir(SOURCE_DIR):
         if file.endswith(SOURCE_EXT):
             fileDir = file
-            compile_list[file] = getHumanReadableTime(
-                                        getmtime(toSourceDir(fileDir)))
+            source_list[file] = getHumanReadableTime(getmtime(get_path_under_source_dir(fileDir)))
 
-    # Retrieve meta info records
-    previous_article_list = dict()
-
+    # Retrieve records of last time's source list
+    previous_source_list = dict()
     try:
         with open(META_DB_DIR, 'r') as csvfile:
             reader = csv.reader(csvfile, delimiter=CSV_DELIMITER, quotechar='|')
             for row in reader:
-                previous_article_list[row[0]] = float(row[1])
-    except IOError:
+                previous_source_list[row[0]] = float(row[1])
+    except IOError: # Previous record not found
         pass
 
-    # Update meta database
+    # Update source list record
     with open(META_DB_DIR, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=CSV_DELIMITER,
-                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        for file in compile_list:
-            writer.writerow([file, str(compile_list[file])])
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for file in source_list:
+            writer.writerow([file, str(source_list[file])])
 
-    # Delete from compile_list which are older or of the same
+    # Delete from source_list which are older or of the same
     # modification time.
     if not FORCE_GENERATE:
-        for file in list(compile_list.keys()):
-            if file in list(previous_article_list.keys()):
-                if compile_list[file] <= previous_article_list[file]:
-                    del compile_list[file]
+        for file in list(source_list.keys()):
+            if file in list(previous_source_list.keys()):
+                if source_list[file] <= previous_source_list[file]:
+                    del source_list[file]
 
-    return compile_list
+    return source_list
 
 def indent(s, n=0, newline=1):
     """
-    Indent every line of s by n spaces.
+    Return a string, which is putting n spaces in front of every line of s.
+    Used in html construction.
     """
 
-    end = '\n' * newline
+    END = '\n' * newline
 
     result = ''
     for line in s.splitlines():
-        result += ' ' * (n + SOURCE_INDENTATION) + line + end
+        result += ' ' * (n + SOURCE_INDENTATION) + line + END
 
     return result
 
-def compile(compile_list):
-
+def build_html(compile_list):
     """
     Call markdown2 to convert every .md file in the compile list to
     HTML files.
@@ -173,7 +175,7 @@ def compile(compile_list):
                 template = f.read()
         result = template
 
-        title = extractTitle(mainHtml)
+        title = get_html_title(mainHtml)
 
         result = result.replace('<!--TITLETAG-->', title, 1)
         result = result.replace('<!--CONTENT-->',
@@ -205,12 +207,12 @@ def compile(compile_list):
 
     # Compile source files to the destination format
     for file in list(compile_list.keys()):
-        with open(toSourceDir(file)) as f:
+        with open(get_path_under_source_dir(file)) as f:
             sourceContent = f.read()
             htmlFile = splitext(file)[0] + '.html'
             with open(htmlFile, 'w') as f:
                 print(("Converting %s" % file))
-                f.write(beautify(render(sourceContent)))
+                f.write(beautify(md2html(sourceContent)))
 
     if not compile_list:
         print("Nothing to update.\n")
@@ -231,19 +233,19 @@ def build_frontpage():
             with open(file, 'r') as f:
                 html = f.read()
 
-                if extractSingleORCACode(html, 'FP_TITLE'):
-                    title = extractSingleORCACode(html, 'FP_TITLE')
+                if get_single_ORCA_code(html, 'FP_TITLE'):
+                    title = get_single_ORCA_code(html, 'FP_TITLE')
                 else:
-                    title = extractTitle(html)
+                    title = get_html_title(html)
 
                 articles.append({'filename':
                                  file,
                                  'title':
                                  title,
                                  'COLUMN':
-                                 extractSingleORCACode(html, 'COLUMN'),
+                                 get_single_ORCA_code(html, 'COLUMN'),
                                  'PRIORITY':
-                                 extractSingleORCACode(html, 'PRIORITY'),
+                                 get_single_ORCA_code(html, 'PRIORITY'),
                                  'mtime':
                                  getmtime(file)})
 
@@ -260,7 +262,7 @@ def build_frontpage():
             if art['PRIORITY'] == '-1':
                 continue
 
-            if (art['COLUMN'] == column):
+            if art['COLUMN'] == column:
                 content += indent('<li>', 8, newline=0)
                 content += '<a href="'
                 content += art['filename']
@@ -297,19 +299,20 @@ if __name__ == '__main__':
     config.read(CONFIG_DIR)
     FRONTPAGE_COLUMN_ORDER = config.get('Frontpage', 'Column_Order')
 
-    compile_list = getCompileList()
-    compile(compile_list)
+    source_list = get_source_list()
+    build_html(source_list)
     build_frontpage()
     build_archive()
 
-    if not DEBUG and compile_list:
-        updateGithub(compile_list)
+    if (not DEBUG) and source_list:
+        updateGithub(source_list)
         try:
             import updateServer
             updateServer.sshUpdate()
+            print("Server updated.")
         except ImportError:
             print("Server sync module found.")
     else:
-        print("No server sync.")
+        print("No modification since last update.")
 
-    print("*** Orca sleeps now ***")
+    print("\n*** Orca sleeps now ***")
