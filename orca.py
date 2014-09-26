@@ -14,7 +14,7 @@ CONFIG_DIR = ".orca.conf"
 
 CSV_DELIMITER = ';'
 
-SOURCE_INDENTATION = 8
+PREFERRED_INDENTATION = 8
 
 ORCA_CODE_PREFIX = '<!--ORCA:'
 
@@ -27,7 +27,7 @@ from configparser import ConfigParser
 import csv
 from subprocess import call
 
-
+# Modify md2html if switching to new markdown render engine
 import markdown2
 md2html = lambda s: markdown2.markdown(s, extras=['wiki-tables'])
 
@@ -67,13 +67,13 @@ def get_html_title(html):
 
 
 def get_single_ORCA_code(html, code):
-    signitureString = ORCA_CODE_PREFIX + code
+    signiture_string = ORCA_CODE_PREFIX + code
     try:
-        posStart = html.index(signitureString) + len(signitureString)
+        posStart = html.index(signiture_string) + len(signiture_string)
         posMark = html.index('=', posStart)
         posEnd = html.index('-->', posMark)
         return html[posMark+1:posEnd]
-    except:
+    except IndexError:
         return ''
 
 
@@ -129,7 +129,7 @@ def indent(s, n=0, newline=1):
 
     result = ''
     for line in s.splitlines():
-        result += ' ' * (n + SOURCE_INDENTATION) + line + END
+        result += ' ' * (n + PREFERRED_INDENTATION) + line + END
 
     return result
 
@@ -313,6 +313,6 @@ if __name__ == '__main__':
         except ImportError:
             print("Server sync module found.")
     else:
-        print("No modification since last update.")
+        print("No modification since last server update.")
 
     print("\n*** Orca sleeps now ***")
