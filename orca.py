@@ -1,5 +1,8 @@
 #!/usr/bin/python
 # -*- coding=utf-8 -*-
+# TODO: Build archive
+# TODO: Use folder to specify column and order of column
+# TODO: Article ordering that works as expected
 
 __author__ = "Andy Shu Xin"
 __copyright__ = "Copyright (C) 2014 Andy Shu Xin"
@@ -18,9 +21,6 @@ PREFERRED_INDENTATION = 8
 
 ORCA_CODE_PREFIX = '<!--ORCA:'
 
-FORCE_GENERATE = False
-DEBUG = False
-
 from os import listdir, chdir, getcwd
 from os.path import getmtime, splitext
 from configparser import ConfigParser
@@ -30,14 +30,6 @@ from subprocess import call
 # Modify md2html if switching to new markdown render engine
 import markdown2
 md2html = lambda s: markdown2.markdown(s, extras=['wiki-tables'])
-
-
-def getHumanReadableTime(timeInSec):
-    return timeInSec
-
-
-def getAbsoluteTime(hTime):
-    return hTime
 
 
 def get_path_under_source_dir(path):
@@ -73,7 +65,7 @@ def get_single_ORCA_code(html, code):
         posMark = html.index('=', posStart)
         posEnd = html.index('-->', posMark)
         return html[posMark+1:posEnd]
-    except IndexError:
+    except ValueError:
         return ''
 
 
@@ -90,7 +82,7 @@ def get_source_list():
     for file in listdir(SOURCE_DIR):
         if file.endswith(SOURCE_EXT):
             fileDir = file
-            source_list[file] = getHumanReadableTime(getmtime(get_path_under_source_dir(fileDir)))
+            source_list[file] = getmtime(get_path_under_source_dir(fileDir))
 
     # Retrieve records of last time's source list
     previous_source_list = dict()
@@ -111,13 +103,13 @@ def get_source_list():
 
     # Delete from source_list which are older or of the same
     # modification time.
-    if not FORCE_GENERATE:
-        for file in list(source_list.keys()):
-            if file in list(previous_source_list.keys()):
-                if source_list[file] <= previous_source_list[file]:
-                    del source_list[file]
+    for file in list(source_list.keys()):
+        if file in list(previous_source_list.keys()):
+            if source_list[file] <= previous_source_list[file]:
+                del source_list[file]
 
     return source_list
+
 
 def indent(s, n=0, newline=1):
     """
@@ -132,6 +124,7 @@ def indent(s, n=0, newline=1):
         result += ' ' * (n + PREFERRED_INDENTATION) + line + END
 
     return result
+
 
 def build_html(compile_list):
     """
@@ -217,11 +210,12 @@ def build_html(compile_list):
     if not compile_list:
         print("Nothing to update.\n")
 
+
 def build_frontpage():
 
     """
     Build index.html from existing htmls,
-          following the ORCA instructings lay down in the files.
+          following the ORCA instructions lay down in the files.
     """
 
     print('\nBuilding index.html')
@@ -274,13 +268,16 @@ def build_frontpage():
         content += indent('</div>', 0, newline=2)
 
     with open(FRONT_TEMPLATE, 'r') as f:
-        frontHTML = f.read()
-        frontHTML = frontHTML.replace('<!--CONTENT-->', content)
+        frontpage_HTML = f.read()
+        frontpage_HTML = frontpage_HTML.replace('<!--CONTENT-->', content)
         with open('index.html', 'w') as f_index:
-            f_index.write(frontHTML)
+            f_index.write(frontpage_HTML)
+
 
 def build_archive():
+    #TODO
     pass
+
 
 def updateGithub(compile_list):
     if compile_list:
@@ -289,6 +286,7 @@ def updateGithub(compile_list):
         commit_message = ';'.join(list(compile_list.keys()))
         call(['git', 'commit', '-m', commit_message])
         call(['git', 'push'])
+
 
 if __name__ == '__main__':
 
@@ -304,15 +302,15 @@ if __name__ == '__main__':
     build_frontpage()
     build_archive()
 
-    if (not DEBUG) and source_list:
+    if source_list:
         updateGithub(source_list)
         try:
             import updateServer
             updateServer.sshUpdate()
-            print("Server updated.")
+            print("Server updated.\n")
         except ImportError:
-            print("Server sync module found.")
+            print("Server sync module found.\n")
     else:
         print("No modification since last server update.")
 
-    print("\n*** Orca sleeps now ***")
+    print("*** Orca sleeps now ***\n")
