@@ -1,8 +1,8 @@
-#!/usr/bin/python
 # -*- coding=utf-8 -*-
 # TODO: Build archive
 # TODO: Use folder to specify column and order of column
 # TODO: Article ordering that works as expected
+# TODO: Option of just updating, without re-compiling
 
 __author__ = "Andy Shu Xin"
 __copyright__ = "Copyright (C) 2014 Andy Shu Xin"
